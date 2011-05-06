@@ -9,7 +9,6 @@
 	<classpathentry kind="lib" path="lib/ecj.jar"/>
 	<classpathentry kind="lib" path="lib/jna.jar"/>
 	<classpathentry kind="lib" path="lib/pde.jar"/>
-	<classpathentry kind="lib" path="lib/rfid.jar"/>
 	<classpathentry kind="lib" path="lib/RXTXcomm.jar">
 		<attributes>
 			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="RFID-reader/lib/macosx"/>

@@ -1,3 +1,5 @@
+import java.io.IOException;
+
 import gnu.io.NoSuchPortException;
 import gnu.io.PortInUseException;
 
@@ -17,12 +19,18 @@ public class Main {
 		
 		try {
 			reader = new RFIDReader(portName);
-	        reader.setVerbose(true);
+			int[] data = new int[2];
+			data[0] = 0x18;
+			data[1] = 0x0A;
+	        reader.sendCommand(0x88, data);
 	    } catch (NoSuchPortException e) {
 	    	System.out.println("Port "+portName+" was not found!");
 	    } catch (PortInUseException e) {
 	    	System.out.println("Port "+portName+" is in use by another program.");
-	    }
+	    } catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }
