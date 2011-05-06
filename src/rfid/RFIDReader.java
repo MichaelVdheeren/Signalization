@@ -33,34 +33,24 @@ import gnu.io.SerialPort;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Collection;
-import java.util.ConcurrentModificationException;
 import java.util.Enumeration;
-import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.Vector;
 
-public class RFIDReader extends Thread
+public abstract class RFIDReader extends Thread
 {
-    private boolean verbose = false;
-
     private CommPortIdentifier portId = null;
     private String portName;
     private SerialPort serialPort;
-    private InputStream in;
-    private OutputStream out;
-    private boolean running = false;
+    protected InputStream in;
+    protected OutputStream out;
+    protected boolean running = false;
 
-    private Hashtable<String, RFIDTag> tags = null;
+    private Vector<RFIDListener> listeners = new Vector<RFIDListener>();
+    
+    protected int threadSleepTime = 10;
 
-    private int threadSleepTime = 10;
-    private int tagRemovedTimeout = 300;
-
-    private Vector<RFIDListener> listeners;
-
-    public RFIDReader(String portName) throws NoSuchPortException, PortInUseException {
+    public RFIDReader(String portName) throws NoSuchPortException {
 		this.setPort(portName);
-		this.open();
     }
 
     /**
@@ -72,8 +62,7 @@ public class RFIDReader extends Thread
 		if (this.running) this.close();
 		
 		Boolean glob = false;
-		if (portName.endsWith("*"))
-		{
+		if (portName.endsWith("*")) {
 			glob = true;
 			portName = portName.substring(0, portName.length()-1);
 		}
@@ -103,19 +92,10 @@ public class RFIDReader extends Thread
     }
 
     /**
-     * Returns the current tag, or null if there is no tag at the reader right now.
-     */
-    public Collection<RFIDTag> getCurrentTags() {
-    	return this.tags.values();
-    }
-
-
-    /**
      * Opens the port and starts the reader thread. If the reader was already running
      * this function returns false, otherwise true.
      */
-    public boolean open() throws PortInUseException 
-    {
+    public boolean open() throws PortInUseException {
 		if (this.running) return false;
 	
 		serialPort = (SerialPort) portId.open("RFID Reader @ " + portName, 0);
@@ -130,137 +110,45 @@ public class RFIDReader extends Thread
 	
 		    in = serialPort.getInputStream();
 		    out = serialPort.getOutputStream();
-	
 		} catch (Exception e) {
 		    // If any of this initalization stuff fails, we're in trouble.
 		    System.out.println("Cannot set port parameters for port " + portName + "!!!");
 		    System.exit(1);
 		}
-	
-		running = true;
-		//start();
-	
+		
 		return true;
     }
 
     /**
      * Shuts down the reader thread and closes the serial port.
      */
-    public void close() 
-    {
-		this.running = false; // stops reader thread
-		this.tags    = new Hashtable<String, RFIDTag>();
+    public void close() {
 		serialPort.close();
-    }
-
-    /**
-     * Set the verbosity of this reader. By default, the reader is
-     * verbose, e.g., messages will be printed when a tag is read and
-     * removed. To mute the reader, call setVerbose(false).
-     */
-    public void setVerbose(boolean verbose) 
-    {
-    	this.verbose = verbose;
     }
 
     /**
      * Adds a listener for this reader
      */
-    public void addListener(RFIDListener l) 
-    {
+    public void addListener(RFIDListener l) {
     	listeners.add(l);
     }
 
     /**
      * Removes a listener
      */
-    public void removeListener(RFIDListener l) 
-    {
-    	if (listeners.contains(l)) 
-    	{
-    		listeners.remove(l);
-    	}
+    public void removeListener(RFIDListener l) {
+    	listeners.remove(l);
     }
 
-    /**
-     * Set the timeout for the removal of a tag, in
-     * milliseconds. Defaults to 500 ms. When -1 is passed, tags will
-     * never be marked as 'removed', e.g., getCurrentTags() will always
-     * return all tags that have been read.
-     */
-    public void setTagRemoveTimeout(int timeout) 
-    {
-    	this.tagRemovedTimeout = timeout;
+    protected void sendPacket(RFIDPacket packet) throws IOException {
+    	int length = packet.getLength();
+		out.write(packet.getBytes(), 0, length);
     }
-
-    /**
-     * Represent this reader as a string for easy printing
-     */
-    public String toString() 
-    {
-    	return "[RFID Reader @ " + this.portName + "]";
+    
+    public void start() {
+    	running = true;
+    	super.start();
     }
-
-    //////////////////////////////////// internal ////////////////////////////////////////
-
-    private void verbose(String s) 
-    {
-		if (this.verbose)
-		{
-		    System.out.println(this + ": " + s);
-		}
-    }
-
-    /**
-     * Do not call run() directly! It is called for you when open() was succesful.
-     */
-    public void run() 
-    {
-
-		while (running) {
-		}
-    }
-
-    private void tagSeen(RFIDTag tag) 
-    {
-
-		if (!this.tags.containsKey(tag.tag)) {
-		    // new tag
-	
-		    this.verbose("Got tag: " + tag);
-		    this.tags.put(tag.tag, tag);
-	
-		    for (Enumeration e = listeners.elements(); e.hasMoreElements(); )
-			((RFIDListener)e.nextElement()).tagAdded(new RFIDTagEvent(this, tag));
-		}
-	
-		// bump 'last seen' timer for seen tag
-		this.tags.get(tag.tag).bump();
-    }
-
-    private void sendCommand(byte[] packet) throws IOException 
-    {
-    	int length = packet.length;
-		out.write(packet, 0, length);
-    }
-
-    private void handleResponse() throws IOException {
-		
-    }
-
-    private void handleSeekForTag(int[] data) throws IOException 
-    {
-		if (data.length == 1) {
-		    // command in progress
-		    if (data[0] == 0x55)
-			this.verbose("RF field is off!!!!!");
-	
-		    // wait for tag to enter field
-		    this.handleResponse();
-		    return;
-		}
-	
-		RFIDTag tag = new RFIDTag(data);
-		this.tagSeen(tag);
-    }
+    
+    protected abstract RFIDPacket receivePacket() throws IOException;
 }

@@ -1,9 +1,6 @@
-import java.io.IOException;
-
 import gnu.io.NoSuchPortException;
 import gnu.io.PortInUseException;
-
-import rfid.RFIDReader;
+import rfid.idtronic.EDHFReader;
 
 
 public class Main {
@@ -13,23 +10,18 @@ public class Main {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		RFIDReader reader;
+		EDHFReader reader;
 		String portName = "/dev/tty.SLAB_USBtoUART";
 		
 		
 		try {
-			reader = new RFIDReader(portName);
-			int[] data = new int[2];
-			data[0] = 0x18;
-			data[1] = 0x0A;
-	        reader.sendCommand(0x88, data);
+			reader = new EDHFReader(portName);
+			reader.open();
+			reader.start();
 	    } catch (NoSuchPortException e) {
 	    	System.out.println("Port "+portName+" was not found!");
 	    } catch (PortInUseException e) {
-	    	System.out.println("Port "+portName+" is in use by another program.");
-	    } catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+	    	System.out.println("Port "+portName+" is in use!");
 		}
 	}
 
