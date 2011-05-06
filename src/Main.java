@@ -3,7 +3,7 @@ import java.io.IOException;
 import gnu.io.NoSuchPortException;
 import gnu.io.PortInUseException;
 
-import org.onsignal.rfid.RFIDReader;
+import rfid.RFIDReader;
 
 
 public class Main {

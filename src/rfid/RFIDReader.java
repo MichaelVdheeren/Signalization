@@ -22,7 +22,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-package org.onsignal.rfid;
+package rfid;
 
 
 import gnu.io.CommPortIdentifier;
@@ -58,57 +58,17 @@ public class RFIDReader extends Thread
 
     private Vector<RFIDListener> listeners;
 
-
-    /**
-     * Constructor; pass in the name of the port the reader is
-     * connected to. The port will be opened and the reader will be
-     * started.
-     */
-    public RFIDReader(String portName) throws NoSuchPortException, PortInUseException 
-    {
-		this();
+    public RFIDReader(String portName) throws NoSuchPortException, PortInUseException {
 		this.setPort(portName);
 		this.open();
     }
-
-    /**
-     * Constructor using a port name and an instance of a listener
-     * object which will be notified on tag events.
-     */
-    public RFIDReader(String portName, RFIDListener listener) throws NoSuchPortException, PortInUseException 
-    {
-		this(portName);
-		this.addListener(listener);
-    }
-
-    /**
-     * COnstructor without port name, no serial port will be opened,
-     * you'lll have it to do yourself using setPort() and open(). You
-     * can pass in a listener object, though.
-     */
-    public RFIDReader(RFIDListener listener) 
-    {
-		this();
-		this.addListener(listener);
-    }
-
-    /**
-     * The basic constructor. Use RFIDReader(String portName) for more convenience.
-     */
-    public RFIDReader() 
-    {
-		this.listeners = new Vector<RFIDListener>();
-		this.tags      = new Hashtable<String, RFIDTag>();
-    }
-
 
     /**
      * Set or change the name of the port. If the reader is running,
      * it will be shut down first. You'll have to call open() again to
      * restart the reader on the new port.
      */
-    public void setPort(String portName) throws NoSuchPortException 
-    {
+    public void setPort(String portName) throws NoSuchPortException {
 		if (this.running) this.close();
 		
 		Boolean glob = false;
@@ -145,14 +105,14 @@ public class RFIDReader extends Thread
     /**
      * Returns the current tag, or null if there is no tag at the reader right now.
      */
-    public Collection<RFIDTag> getCurrentTags() 
-    {
+    public Collection<RFIDTag> getCurrentTags() {
     	return this.tags.values();
     }
 
 
     /**
-     * Opens the prot and starts the reader thread. If the reader was already running this function returns false, otherwise true.
+     * Opens the port and starts the reader thread. If the reader was already running
+     * this function returns false, otherwise true.
      */
     public boolean open() throws PortInUseException 
     {
@@ -258,41 +218,6 @@ public class RFIDReader extends Thread
     {
 
 		while (running) {
-		    try {
-			this.sendCommand(0x82); // seek for tag
-			this.handleResponse();
-		    } catch(Exception e) {
-			this.verbose("Seek for tag failed!");
-		    }
-	
-		    if (this.tagRemovedTimeout < 0) {
-			// Do not check for tag remove timeouts
-			continue;
-		    }
-	
-		    long now = System.currentTimeMillis();
-	
-		    Iterator it = this.tags.values().iterator();
-		    while (it.hasNext()) {
-			RFIDTag tag;
-			try {
-			    tag = (RFIDTag)it.next();
-			} catch (ConcurrentModificationException e) {
-			    // Other thread changed the tags; skip this loop.
-			    break;
-			}
-	
-			if (now - tag.lastSeen > this.tagRemovedTimeout) {
-	
-			    // It has been removed
-			    this.verbose("Tag removed");
-			    this.tags.remove(tag.tag);
-	
-			    for (Enumeration e = listeners.elements(); e.hasMoreElements(); )
-				((RFIDListener)e.nextElement()).tagRemoved(new RFIDTagEvent(this, tag));
-			}
-		    }
-		    try { Thread.sleep(this.threadSleepTime); } catch (InterruptedException e) {}
 		}
     }
 
@@ -312,99 +237,15 @@ public class RFIDReader extends Thread
 		// bump 'last seen' timer for seen tag
 		this.tags.get(tag.tag).bump();
     }
-	
-    private void sendCommand(int command) throws IOException 
+
+    private void sendCommand(byte[] packet) throws IOException 
     {
-		int[] data = {};
-		sendCommand(command, data);
+    	int length = packet.length;
+		out.write(packet, 0, length);
     }
 
-    public void sendCommand(int cmd, int[] data) throws IOException 
-    {
-		byte[] command = new byte[255];
-		command[0] = (byte)0xAA;
-		command[1] = (byte)0x00;
-		command[2] = (byte)(data.length+1);
-		command[3] = (byte)cmd;
-	
-		int checksum = command[1]^command[2]^command[3];
-	
-		for (int i=0; i<data.length; i++) {
-		    command[4+i] = (byte)data[i];
-		    checksum ^= data[i];
-		}
-	
-		command[4+data.length] = (byte)checksum;
-		command[4+data.length+1] = (byte)0xBB;
+    private void handleResponse() throws IOException {
 		
-		int length = 6+data.length;
-		
-		String result = "";
-		  for (int i=0; i < length; i++) {
-		    result +=
-		          Integer.toString((command[i] & 0xff) + 0x100, 16).substring(1);
-		  }
-		  
-		  System.out.println(result);
-		
-		out.write(command, 0, length);
-    }
-
-    private void handleResponse() throws IOException 
-    {
-		int[] data;
-		byte[] r = new byte[1];
-		int read;
-		int length;
-		int command;
-	
-		read = in.read(r, 0, 1);
-		if (read != 1 || r[0] != -1) return; // throw new Error("Protocol error!");
-	
-		read = in.read(r, 0, 1);
-		if (read != 1 || r[0] != 0) return; // throw new Error("Protocol error!");
-	
-		read = in.read(r, 0, 1);
-		if (read != 1) return; // throw new Error("Protocol error!");
-	
-		length = r[0]-1;
-		data = new int[length];
-	
-		read = in.read(r, 0, 1);
-		if (read != 1) return; // throw new Error("Protocol error!");
-	
-		command = r[0] & 0xFF;
-	
-		if (length > 0) {
-		    for (int i=0; i<length; i++) {
-			read = in.read(r, 0, 1);
-			if (read == 0) return; // throw new Error("Protocol error!");
-			data[i] = r[0] & 0xFF;
-		    }
-		}
-	
-		// read checksum
-		read = in.read(r, 0, 1);
-		if (read != 1) return; // throw new Error("Protocol error!");
-	
-		switch(command) {
-		case 0x81:
-		    this.printReaderVersion(data);
-		    break;
-	
-		case 0x82:
-		    this.handleSeekForTag(data);
-		    break;
-		}
-	
-    }
-
-    private void printReaderVersion(int[] data) 
-    {
-		System.out.print("RFID Reader version: ");
-		for (int i=0; i<data.length; i++)
-		    System.out.print(Integer.toHexString(data[i]));
-		System.out.println("");
     }
 
     private void handleSeekForTag(int[] data) throws IOException 
