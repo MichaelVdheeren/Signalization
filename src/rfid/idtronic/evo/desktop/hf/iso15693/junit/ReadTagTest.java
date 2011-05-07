@@ -35,7 +35,6 @@ public class ReadTagTest {
 		});
 		
 		reader.open();
-		reader.start();
 		reader.execute(new ReadCommand(2, 1, 30, true));
 		reader.join();
 	}
