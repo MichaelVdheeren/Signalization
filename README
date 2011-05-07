@@ -1,0 +1,5 @@
+How to build the Signalization API from source:
+
+1. Checkout and import the Signalization project from GitHub (https://github.com/michaelvanderheeren/Signalization).
+2. Check if the build path contains references to the libraries (*.jar) inside the libs folder of the Signalization project.
+3. Make sure the correct native library is selected for the RXTX communication library. This depends upon your operating system and can be set in the build path.
