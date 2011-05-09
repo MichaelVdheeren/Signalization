@@ -37,9 +37,14 @@ public abstract class AbstractReader extends Thread
      * Set or change the name of the port. If the reader is running,
      * it will be shut down first. You'll have to call open() again to
      * restart the reader on the new port.
+     * @param 	portName
+     * @return	True if the port was successfully set, false otherwise.
+     * @throws 	NoSuchPortException
+     * 			When the given port does not exist.
      */
-    public void setPort(String portName) throws NoSuchPortException {
-		if (this.running) this.close();
+    public boolean setPort(String portName) throws NoSuchPortException {
+		if (this.running && !this.close())
+			return false;
 		
 		Boolean glob = false;
 		if (portName.endsWith("*")) {
@@ -57,12 +62,12 @@ public abstract class AbstractReader extends Thread
 		    	if (!glob) {
 					if (portId.getName().equals(portName)) {
 					    this.portName = portName;
-					    return;
+					    return true;
 					}
 		    	} else {
 		    		if (portId.getName().startsWith(portName)) {
 		    			this.portName = portId.getName();
-		    			return;
+		    			return true;
 		    		}
 		    	}
 		    }
@@ -73,8 +78,10 @@ public abstract class AbstractReader extends Thread
     }
 
     /**
-     * Opens the port and starts the reader thread. If the reader was already running
-     * this function returns false, otherwise true.
+     * Opens the port for the reader.
+     * @return	True if opening the port was successful, false otherwise.
+     * @throws 	PortInUseException
+     * 			When the port of this reader is in use.
      */
     public boolean open() throws PortInUseException {
 		if (this.running) return false;
@@ -96,18 +103,31 @@ public abstract class AbstractReader extends Thread
 		    System.out.println("Cannot set port parameters for port " + portName + "!!!");
 		    System.exit(1);
 		}
-		
-		start();
+
 		return true;
     }
 
     /**
      * Shuts down the reader thread and closes the serial port.
+     * @return	True if closing the port was successful, false otherwise.
      */
-    public void close() {
+    public boolean close() {
     	this.running = false;
     	this.queue.clear();
-		serialPort.close();
+    	
+    	if (serialPort == null)
+    		return true;
+    	
+    	try {
+	    	in.close();
+	    	out.close();
+	    	serialPort.removeEventListener();
+			serialPort.close();
+    	} catch(IOException e) {
+    		return false;
+    	}
+		
+		return true;
     }
 
     /**
@@ -157,7 +177,8 @@ public abstract class AbstractReader extends Thread
     }
     
     /**
-     * Start this readers thread.
+     * Start this readers thread. Do not call this method directly. This
+     * method is called when a command is queued for execution.
      */
     public void start() {
     	running = true;
@@ -183,6 +204,9 @@ public abstract class AbstractReader extends Thread
 		    	
 		    	if (reply != null)
 		    		notifyListeners(command,reply);
+		    	
+		    	if (queue.empty())
+		    		running = false;
 		    } catch(Exception e) {
 		    	continue;
 		    }
@@ -206,6 +230,9 @@ public abstract class AbstractReader extends Thread
      */
     public synchronized void execute(AbstractCommand command) {
     	queue.add(command);
+    	
+    	if (!running)
+    		start();
     }
     
     /**
