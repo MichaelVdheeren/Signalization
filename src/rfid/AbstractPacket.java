@@ -53,6 +53,13 @@ public abstract class AbstractPacket {
 	public void bump() {
     	this.lastSeen = System.currentTimeMillis();
     }
+	
+	/**
+	 * Get the time this packets has been last seen.
+	 */
+	public long getTimeLastSeen() {
+		return this.lastSeen;
+	}
 
 	@Override
 	public int hashCode() {
@@ -75,6 +82,4 @@ public abstract class AbstractPacket {
 			return false;
 		return true;
 	}
-	
-	
 }

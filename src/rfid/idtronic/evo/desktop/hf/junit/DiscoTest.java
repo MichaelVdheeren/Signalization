@@ -1,5 +1,4 @@
-package rfid.idtronic.evo.desktop.hf.iso15693.junit;
-
+package rfid.idtronic.evo.desktop.hf.junit;
 
 import gnu.io.NoSuchPortException;
 import gnu.io.PortInUseException;
@@ -10,9 +9,9 @@ import org.junit.Test;
 import rfid.ReplyEvent;
 import rfid.ReplyEventListener;
 import rfid.idtronic.evo.desktop.hf.EDHFReader;
-import rfid.idtronic.evo.desktop.hf.iso15693.ReadCommand;
 
-public class ReadTagTest {
+
+public class DiscoTest {
 	EDHFReader reader;
 	String portName = "/dev/tty.SLAB_USBtoUART";
 	
@@ -21,7 +20,7 @@ public class ReadTagTest {
 	}
 
 	@Test
-	public void readTest() throws NoSuchPortException, PortInUseException, InterruptedException  {
+	public void controlled1Test() throws NoSuchPortException, PortInUseException, InterruptedException  {
 		reader = new EDHFReader(portName);
 		reader.addListener(new ReplyEventListener() {
 			
@@ -33,7 +32,7 @@ public class ReadTagTest {
 		});
 		
 		reader.open();
-		reader.execute(new ReadCommand(2, 1, 30, true));
+		reader.setControlLed1(0x18,0x0A);
 		reader.join();
 	}
 }

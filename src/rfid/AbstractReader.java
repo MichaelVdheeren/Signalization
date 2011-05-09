@@ -49,6 +49,7 @@ public abstract class AbstractReader extends Thread
 	
 		portId = null;
 	
+		@SuppressWarnings("rawtypes")
 		Enumeration portList = CommPortIdentifier.getPortIdentifiers();
 		while (portList.hasMoreElements()) {
 		    portId = (CommPortIdentifier) portList.nextElement();
