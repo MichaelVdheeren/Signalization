@@ -1,11 +1,13 @@
 package rfid;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
  * Class representing an abstract packet of bytes.
  */
-public abstract class AbstractPacket {
+public abstract class AbstractPacket implements Serializable {
+	private static final long serialVersionUID = 1L;
 	private long lastSeen;
 	
 	public AbstractPacket() {
