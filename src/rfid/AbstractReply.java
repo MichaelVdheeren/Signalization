@@ -4,6 +4,7 @@ package rfid;
  * Class representing the reply received from the RFID reader.
  */
 public abstract class AbstractReply extends AbstractPacket {
+	private static final long serialVersionUID = 1L;
 	private final byte[] bytes;
 	
 	/**

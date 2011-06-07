@@ -4,6 +4,7 @@ package rfid;
  * A class representing an abstract command for the RFID reader.
  */
 public abstract class AbstractCommand extends AbstractPacket {
+	private static final long serialVersionUID = 1L;
 	private final boolean autoRepeat;
 	
 	/**
